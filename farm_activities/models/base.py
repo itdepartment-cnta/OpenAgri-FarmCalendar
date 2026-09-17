@@ -68,6 +68,22 @@ class FarmCalendarActivity(models.Model):
                           blank=False, null=False, verbose_name='ID')
 
     activity_type = models.ForeignKey(FarmCalendarActivityType, on_delete=models.CASCADE)
+
+    # ── PARCHE CNTA: multitenancy ────────────────────────────────────────
+    # Upstream no guarda de quien es cada registro, asi que no hay forma de
+    # segmentar por cliente. Este campo es el discriminador.
+    #
+    # Nullable a proposito: los registros anteriores al parche no lo tienen,
+    # y exigirlo romperia toda escritura que no lo informe.
+    #
+    # CharField y no UUIDField porque hoy la unica identidad disponible es
+    # el client_id (entero) de SheepCare; el Tenant.id (UUID) de GateKeeper
+    # no existe todavia. Asi caben los dos sin una segunda migracion.
+    tenant = models.CharField(
+        max_length=64, null=True, blank=True, db_index=True,
+        verbose_name='Tenant',
+        help_text='Referencia opaca al cliente propietario del registro.'
+    )
     title = models.CharField(max_length=200, blank=True)
     start_datetime = models.DateTimeField(default=datetime.date.today)
     end_datetime = models.DateTimeField(blank=True, null=True)

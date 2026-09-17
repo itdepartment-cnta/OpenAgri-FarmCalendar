@@ -124,6 +124,8 @@ class FarmAnimalSerializer(BaseFarmAssetSerializer):
             'hasAgriParcel',
             'sex', 'isCastrated', 'species', 'breed', 'birthdate', 'isMemberOfAnimalGroup',
             'status', 'invalidatedAtTime', 'dateCreated', 'dateModified',
+            # PARCHE CNTA: multitenancy
+            'tenant',
         ]
 
     def to_representation(self, instance):

@@ -22,7 +22,8 @@ SECRET_KEY = config('DJANGO_SECRET_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# PARCHE CNTA: upstream fija DEBUG = True. Lo hacemos configurable.
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
 
 ALLOWED_HOSTS = ['.localhost', '127.0.0.1', '[::1]']
@@ -140,10 +141,12 @@ CRISPY_TEMPLATE_PACK = "bootstrap4"
 # AUTH_USER_MODEL = "harvesthand.DefaultAuthUserExtend"
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-redirect-url
-LOGIN_REDIRECT_URL = "calendar"
+LOGIN_REDIRECT_URL = config('LOGIN_REDIRECT_URL', default='calendar')
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-url
-LOGIN_URL = "login"
+LOGIN_URL = config('LOGIN_URL', default='login')
+
+FORCE_SCRIPT_NAME = config('FORCE_SCRIPT_NAME', default='') or None
 
 
 JWT_USER_ID_FIELD = 'user_id'
@@ -225,7 +228,10 @@ OCSM_JSONLD_CONTEXT  = {
 SITE_ID = 1
 
 MIDDLEWARE = [
+    'farm_calendar.utils.script_name_middleware.ScriptNameMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # PARCHE CNTA: sirve los estaticos con DEBUG=False (upstream no lo trae).
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -321,7 +327,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = config('STATIC_URL', default='/static/')
 
 STATIC_ROOT = str(BASE_DIR / "static_root")
 

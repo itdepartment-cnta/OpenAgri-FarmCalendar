@@ -82,7 +82,9 @@ class FarmSerializer(serializers.ModelSerializer):
             'status', 'deleted_at', 'created_at', 'updated_at',
             'id', 'name', 'description', 'administrator',
             'telephone', 'vatID', 'hasAgriParcel',
-            'contactPerson', 'address'
+            'contactPerson', 'address',
+            # PARCHE CNTA: multitenancy
+            'tenant',
         ]
 
     def to_representation(self, instance):
@@ -153,7 +155,9 @@ class FarmParcelSerializer(serializers.ModelSerializer):
             'isCultivatedInLevels', 'isGroundSlope', 'depiction',
             'hasGeometry', 'location',
             'hasAgriCrop',
-            'farm'
+            'farm',
+            # PARCHE CNTA: multitenancy
+            'tenant',
         ]
 
     def to_representation(self, instance):

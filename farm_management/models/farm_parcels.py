@@ -39,7 +39,10 @@ class Farm(BaseModel):
 
 class FarmParcel(BaseModel, LocationBaseModel):
 
-    identifier = models.CharField(max_length=255, unique=True, blank=False, null=False,
+    # PARCHE CNTA: la unicidad era GLOBAL, asi que dos clientes con una
+    # parcela homonima chocaban aunque tuviesen tenant distinto. Pasa a
+    # ser unica por tenant (ver constraints en Meta).
+    identifier = models.CharField(max_length=255, blank=False, null=False,
                                   validators=[])
     farm = models.ForeignKey(Farm, on_delete=models.CASCADE, blank=False, null=False,
                              related_name="farm_parcels")
@@ -68,6 +71,15 @@ class FarmParcel(BaseModel, LocationBaseModel):
     class Meta:
         verbose_name = "Farm Parcel"
         verbose_name_plural = "Farm Parcels"
+        # PARCHE CNTA: unicidad por tenant en vez de global.
+        # Ojo: con tenant NULL, Postgres considera cada fila distinta,
+        # asi que los registros heredados sin tenant no quedan cubiertos.
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'identifier'],
+                name='uniq_farmparcel_tenant_identifier',
+            )
+        ]
 
     def __str__(self):
         return f"{self.farm} - {self.identifier} - ({self.parcel_type})"

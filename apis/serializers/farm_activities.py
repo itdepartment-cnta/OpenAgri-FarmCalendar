@@ -127,7 +127,9 @@ class FarmCalendarActivitySerializer(serializers.ModelSerializer):
             'hasStartDatetime', 'hasEndDatetime',
             'hasAgriParcel',
             'responsibleAgent', 'usesAgriculturalMachinery',
-            'isPartOfActivity'
+            'isPartOfActivity',
+            # PARCHE CNTA: multitenancy
+            'tenant',
         ]
 
     def to_representation(self, instance):
@@ -348,6 +350,8 @@ class ObservationSerializer(FarmCalendarActivitySerializer):
             'hasResult',
             'observedProperty',
             'isPartOfActivity',
+            # PARCHE CNTA: multitenancy
+            'tenant',
         ]
 
 
@@ -422,6 +426,8 @@ class CropStressIndicatorObservationSerializer(ObservationSerializer):
             'hasResult',
             'observedProperty',
             'isPartOfActivity',
+            # PARCHE CNTA: multitenancy
+            'tenant',
         ]
 
     def to_representation(self, instance):
@@ -452,6 +458,8 @@ class CropGrowthStageObservationSerializer(ObservationSerializer):
             'hasResult',
             'observedProperty',
             'isPartOfActivity',
+            # PARCHE CNTA: multitenancy
+            'tenant',
         ]
 
     def to_representation(self, instance):
@@ -478,6 +486,8 @@ class BaseParcelAreaObservationSerializer(ObservationSerializer):
             'hasResult',
             'observedProperty',
             'isPartOfActivity',
+            # PARCHE CNTA: multitenancy
+            'tenant',
         ]
 
 

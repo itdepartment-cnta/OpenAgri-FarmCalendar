@@ -25,6 +25,22 @@ class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated At')
 
+    # ── PARCHE CNTA: multitenancy ────────────────────────────────────────
+    # Upstream no guarda de quien es cada registro, asi que no hay forma de
+    # segmentar por cliente. Este campo es el discriminador.
+    #
+    # Nullable a proposito: los registros anteriores al parche no lo tienen,
+    # y exigirlo romperia toda escritura que no lo informe.
+    #
+    # CharField y no UUIDField porque hoy la unica identidad disponible es
+    # el client_id (entero) de SheepCare; el Tenant.id (UUID) de GateKeeper
+    # no existe todavia. Asi caben los dos sin una segunda migracion.
+    tenant = models.CharField(
+        max_length=64, null=True, blank=True, db_index=True,
+        verbose_name='Tenant',
+        help_text='Referencia opaca al cliente propietario del registro.'
+    )
+
     # Dynamically set the history table name based on the model name
     history = HistoricalRecords(inherit=True)
 

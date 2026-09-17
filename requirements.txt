@@ -15,3 +15,4 @@ django-autocomplete-light==3.11.0
 drf-nested-routers==0.94.1
 numpy==2.3.2
 shapely==2.1.1
+whitenoise==6.8.2

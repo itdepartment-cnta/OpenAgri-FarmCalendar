@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import logging
+import sys
 import warnings
 import os
 
@@ -11,7 +12,8 @@ port = int(os.getenv('APP_PORT', '8002'))
 LOGGING_LEVEL = os.getenv('LOGGING_LEVEL', 'DEBUG')
 
 
-logging.basicConfig(filename='logs/waitress.log', level=getattr(logging, LOGGING_LEVEL))
+# PARCHE CNTA: a stdout, para que 'docker logs' siga siendo util.
+logging.basicConfig(stream=sys.stdout, level=getattr(logging, LOGGING_LEVEL))
 
 warnings.filterwarnings("ignore")
 
