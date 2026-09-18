@@ -1,3 +1,4 @@
+from farm_calendar.utils.tenant_scope import TenantScopedModelViewSet  # PARCHE CNTA
 from rest_framework import permissions, viewsets
 
 from farm_activities.models import (
@@ -62,7 +63,7 @@ from ..filters import (
 )
 
 
-class FarmCalendarActivityTypeViewSet(viewsets.ModelViewSet):
+class FarmCalendarActivityTypeViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows FarmCalendarActivityType to be viewed or edited.
     """
@@ -72,7 +73,7 @@ class FarmCalendarActivityTypeViewSet(viewsets.ModelViewSet):
     filterset_fields = ['name', 'category']
 
 
-class FarmCalendarActivityViewSet(viewsets.ModelViewSet):
+class FarmCalendarActivityViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows FarmCalendarActivity to be viewed or edited.
     """
@@ -83,7 +84,7 @@ class FarmCalendarActivityViewSet(viewsets.ModelViewSet):
     filterset_class = FarmCalendarActivityFilter
 
 
-class AlertViewSet(viewsets.ModelViewSet):
+class AlertViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows Alert to be viewed or edited.
     """
@@ -95,7 +96,7 @@ class AlertViewSet(viewsets.ModelViewSet):
     filterset_class = AlertFilter
 
 
-class FertilizationOperationViewSet(viewsets.ModelViewSet):
+class FertilizationOperationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows FertilizationOperation to be viewed or edited.
     """
@@ -105,7 +106,7 @@ class FertilizationOperationViewSet(viewsets.ModelViewSet):
     filterset_class = FertilizationOperationFilter
 
 
-class IrrigationOperationViewSet(viewsets.ModelViewSet):
+class IrrigationOperationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows IrrigationOperation to be viewed or edited.
     """
@@ -121,7 +122,7 @@ class IrrigationOperationViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class CropProtectionOperationViewSet(viewsets.ModelViewSet):
+class CropProtectionOperationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows CropProtectionOperation to be viewed or edited.
     """
@@ -131,7 +132,7 @@ class CropProtectionOperationViewSet(viewsets.ModelViewSet):
     filterset_class = CropProtectionOperationFilter
 
 
-class ObservationViewSet(viewsets.ModelViewSet):
+class ObservationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows Observation to be viewed or edited.
     """
@@ -147,7 +148,7 @@ class ObservationViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class CropStressIndicatorObservationViewSet(viewsets.ModelViewSet):
+class CropStressIndicatorObservationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows CropStressIndicator to be viewed or edited.
     """
@@ -157,7 +158,7 @@ class CropStressIndicatorObservationViewSet(viewsets.ModelViewSet):
     filterset_class = CropStressIndicatorObservationFilter
 
 
-class CropGrowthStageObservationViewSet(viewsets.ModelViewSet):
+class CropGrowthStageObservationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows CropGrowthStageObservation to be viewed or edited.
     """
@@ -167,7 +168,7 @@ class CropGrowthStageObservationViewSet(viewsets.ModelViewSet):
     filterset_class = CropGrowthStageObservationFilter
 
 
-class YieldPredictionObservationViewSet(viewsets.ModelViewSet):
+class YieldPredictionObservationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows YieldPrediction to be viewed or edited.
     """
@@ -177,7 +178,7 @@ class YieldPredictionObservationViewSet(viewsets.ModelViewSet):
     filterset_class = YieldPredictionObservationFilter
 
 
-class DiseaseDetectionObservationViewSet(viewsets.ModelViewSet):
+class DiseaseDetectionObservationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows DiseaseDetection to be viewed or edited.
     """
@@ -187,7 +188,7 @@ class DiseaseDetectionObservationViewSet(viewsets.ModelViewSet):
     filterset_class = DiseaseDetectionObservationFilter
 
 
-class VigorEstimationObservationViewSet(viewsets.ModelViewSet):
+class VigorEstimationObservationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows VigorEstimation to be viewed or edited.
     """
@@ -197,7 +198,7 @@ class VigorEstimationObservationViewSet(viewsets.ModelViewSet):
     filterset_class = VigorEstimationObservationFilter
 
 
-class SprayingRecommendationObservationViewSet(viewsets.ModelViewSet):
+class SprayingRecommendationObservationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows SprayingRecommendation to be viewed or edited.
     """
@@ -207,7 +208,7 @@ class SprayingRecommendationObservationViewSet(viewsets.ModelViewSet):
     filterset_class = SprayingRecommendationObservationFilter
 
 
-class CompostOperationViewSet(viewsets.ModelViewSet):
+class CompostOperationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows CompostOperation to be viewed or edited.
     """
@@ -217,7 +218,7 @@ class CompostOperationViewSet(viewsets.ModelViewSet):
     filterset_class = CompostOperationFilter
 
 
-class AddRawMaterialOperationViewSet(viewsets.ModelViewSet):
+class AddRawMaterialOperationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows AddRawMaterialOperation to be viewed or edited.
     """
@@ -233,7 +234,7 @@ class AddRawMaterialOperationViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class CompostTurningOperationViewSet(viewsets.ModelViewSet):
+class CompostTurningOperationViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows CompostTurningOperation to be viewed or edited.
     """
@@ -248,7 +249,7 @@ class CompostTurningOperationViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(parent_activity=self.kwargs['compost_operation_pk'])
         return queryset
 
-class AnimalActivityViewSet(viewsets.ModelViewSet):
+class AnimalActivityViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows AnimalActivity to be viewed or edited.
     """
@@ -257,7 +258,7 @@ class AnimalActivityViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filterset_class = AnimalActivityFilter
 
-class AnimalLactatingActivityViewSet(viewsets.ModelViewSet):
+class AnimalLactatingActivityViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows AnimalLactatingActivity to be viewed or edited.
     """

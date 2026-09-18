@@ -1,3 +1,4 @@
+from farm_calendar.utils.tenant_scope import TenantScopedModelViewSet  # PARCHE CNTA
 from rest_framework import permissions, viewsets
 from farm_management.models import (
     Farm,
@@ -11,7 +12,7 @@ from ..serializers import (
 from ..filters import FarmParcelFilter
 
 
-class FarmViewSet(viewsets.ModelViewSet):
+class FarmViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows Farm to be viewed or edited.
     """
@@ -21,7 +22,7 @@ class FarmViewSet(viewsets.ModelViewSet):
     filterset_fields = ['name', 'status']
 
 
-class FarmParcelViewSet(viewsets.ModelViewSet):
+class FarmParcelViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows FarmParcel to be viewed or edited.
     """

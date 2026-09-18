@@ -1,3 +1,4 @@
+from farm_calendar.utils.tenant_scope import TenantScopedModelViewSet  # PARCHE CNTA
 from rest_framework import permissions, viewsets
 
 from farm_management.models import (
@@ -10,7 +11,7 @@ from ..serializers import (
 )
 
 
-class FertilizerViewSet(viewsets.ModelViewSet):
+class FertilizerViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows Fertilizer to be viewed or edited.
     """
@@ -21,7 +22,7 @@ class FertilizerViewSet(viewsets.ModelViewSet):
 
 
 
-class PesticideViewSet(viewsets.ModelViewSet):
+class PesticideViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows Pesticide to be viewed or edited.
     """

@@ -1,3 +1,4 @@
+from farm_calendar.utils.tenant_scope import TenantScopedModelViewSet  # PARCHE CNTA
 from rest_framework import permissions, viewsets
 
 from farm_management.models import (
@@ -15,7 +16,7 @@ from ..serializers import (
 
 
 
-class GenericFarmAssetSerializerViewSet(viewsets.ModelViewSet):
+class GenericFarmAssetSerializerViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows GenericFarmAsset to be viewed or edited.
     """
@@ -25,7 +26,7 @@ class GenericFarmAssetSerializerViewSet(viewsets.ModelViewSet):
     filterset_fields = ['name', 'parcel', 'status']
 
 
-class FarmCropViewSet(viewsets.ModelViewSet):
+class FarmCropViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows FarmCrop to be viewed or edited.
     """
@@ -35,7 +36,7 @@ class FarmCropViewSet(viewsets.ModelViewSet):
     filterset_fields = ['name', 'parcel', 'species', 'variety', 'growth_stage', 'status']
 
 
-class FarmAnimalViewSet(viewsets.ModelViewSet):
+class FarmAnimalViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows FarmAnimal to be viewed or edited.
     """
@@ -45,7 +46,7 @@ class FarmAnimalViewSet(viewsets.ModelViewSet):
     filterset_fields = ['name', 'parcel', 'animal_group', 'status']
 
 
-class AgriculturalMachineViewSet(viewsets.ModelViewSet):
+class AgriculturalMachineViewSet(TenantScopedModelViewSet, viewsets.ModelViewSet):
     """
     API endpoint that allows AgriculturalMachine to be viewed or edited.
     """
