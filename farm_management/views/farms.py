@@ -15,6 +15,11 @@ from farm_management.forms import FarmForm
 
 from farm_management.constants import *
 
+# PARCHE CNTA: la interfaz web no filtraba por empresa. Ver tenant_scope.
+from farm_calendar.utils.tenant_scope import (
+    acotar_a_tenant, acotar_formulario, sellar_con_tenant,
+)
+
 
 @method_decorator(never_cache, name='dispatch')
 class FarmView(LoginRequiredMixin, TemplateView):
@@ -24,7 +29,8 @@ class FarmView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        farms = Farm.active_objects.all()
+        # PARCHE CNTA: solo las de la empresa de quien mira.
+        farms = acotar_a_tenant(Farm.active_objects.all(), self.request)
 
         # Custom serialization to include related fields
         farms_data = []
@@ -63,7 +69,7 @@ class FarmView(LoginRequiredMixin, TemplateView):
         pk = self.kwargs.get('pk')
         # Determine if editing or creating a new Farm
         if pk:
-            farm = get_object_or_404(Farm, pk=pk)
+            farm = get_object_or_404(acotar_a_tenant(Farm.objects.all(), request), pk=pk)
             # Pre-fill the form with the farm data and related address data if available
             initial_data = {
                 'admin_unit_l1': farm.admin_unit_l1,
@@ -73,10 +79,10 @@ class FarmView(LoginRequiredMixin, TemplateView):
                 'community': farm.community,
                 'locator_name': farm.locator_name,
             }
-            form = FarmForm(instance=farm, initial=initial_data)
+            form = acotar_formulario(FarmForm(instance=farm, initial=initial_data), request)
         else:
             # Creating a new Farm
-            form = FarmForm()
+            form = acotar_formulario(FarmForm(), request)
 
         context = self.get_context_data(**kwargs)
         context.update({
@@ -91,12 +97,12 @@ class FarmView(LoginRequiredMixin, TemplateView):
         try:
             if pk:
                 # Update an existing Farm
-                farm = get_object_or_404(Farm, pk=pk)
+                farm = get_object_or_404(acotar_a_tenant(Farm.objects.all(), request), pk=pk)
                 org_farm_name = farm.name
-                form = FarmForm(request.POST, instance=farm)
+                form = acotar_formulario(FarmForm(request.POST, instance=farm), request)
             else:
                 # Create a new Farm
-                form = FarmForm(request.POST)
+                form = acotar_formulario(FarmForm(request.POST), request)
 
             if form.is_valid():
                 # Save the Farm
@@ -105,6 +111,8 @@ class FarmView(LoginRequiredMixin, TemplateView):
                 if pk:
                     farm_instance.lang_code = org_farm_name
 
+                # PARCHE CNTA: lo que se crea desde la interfaz nace con dueno.
+                sellar_con_tenant(farm_instance, request)
                 farm_instance.save()
 
                 # # Save the FarmAddress
@@ -144,7 +152,7 @@ class FarmView(LoginRequiredMixin, TemplateView):
         # Handle DELETE requests to delete a Farm
         pk = kwargs.get('pk')
         try:
-            farm = get_object_or_404(Farm, pk=pk)
+            farm = get_object_or_404(acotar_a_tenant(Farm.objects.all(), request), pk=pk)
             farm.delete()
             return redirect(self.success_url)
 

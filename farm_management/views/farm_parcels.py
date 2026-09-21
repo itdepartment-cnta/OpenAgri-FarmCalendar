@@ -13,6 +13,11 @@ from django.views.generic import TemplateView
 from farm_management.models import FarmParcel, Farm
 from farm_management.forms.farm_parcels import FarmParcelsForm
 
+# PARCHE CNTA: la interfaz web no filtraba por empresa. Ver tenant_scope.
+from farm_calendar.utils.tenant_scope import (
+    acotar_a_tenant, acotar_formulario, sellar_con_tenant,
+)
+
 
 @method_decorator(never_cache, name='dispatch')
 class FarmParcelView(LoginRequiredMixin, TemplateView):
@@ -34,14 +39,15 @@ class FarmParcelView(LoginRequiredMixin, TemplateView):
                               not field.is_relation or field.one_to_one or (field.many_to_one and field.related_model)]
 
         # Add related fields using F expressions
-        farm_parcels = FarmParcel.active_objects.all().values(
+        # PARCHE CNTA: solo las de la empresa de quien mira.
+        farm_parcels = acotar_a_tenant(FarmParcel.active_objects.all(), self.request).values(
             'pk',
             *farm_parcel_fields,
             farm_name=F('farm__name'),  # Related field from FarmMaster
                 )
         farm_parcels_with_coordinates = [
             {**parcel, "coordinates": f"{parcel_obj.latitude}, {parcel_obj.longitude}"}
-            for parcel, parcel_obj in zip(farm_parcels, FarmParcel.objects.filter(pk__in=[p['pk'] for p in farm_parcels]))
+            for parcel, parcel_obj in zip(farm_parcels, acotar_a_tenant(FarmParcel.objects.all(), self.request).filter(pk__in=[p['pk'] for p in farm_parcels]))
         ]
 
         context["farm_parcels"] = json.dumps(list(farm_parcels_with_coordinates), cls=DjangoJSONEncoder)
@@ -53,10 +59,10 @@ class FarmParcelView(LoginRequiredMixin, TemplateView):
         pk = self.kwargs.get('pk')
 
         if pk:
-            farm_parcel = get_object_or_404(FarmParcel, pk=pk)
-            form = FarmParcelsForm(instance=farm_parcel)
+            farm_parcel = get_object_or_404(acotar_a_tenant(FarmParcel.objects.all(), request), pk=pk)
+            form = acotar_formulario(FarmParcelsForm(instance=farm_parcel), request)
         else:
-            form = FarmParcelsForm()
+            form = acotar_formulario(FarmParcelsForm(), request)
 
         context = self.get_context_data(**kwargs)
         context.update({
@@ -69,16 +75,20 @@ class FarmParcelView(LoginRequiredMixin, TemplateView):
         pk = self.kwargs.get('pk')
 
         if pk:
-            farm_parcel = get_object_or_404(FarmParcel, pk=pk)
-            form = FarmParcelsForm(request.POST, instance=farm_parcel)
+            farm_parcel = get_object_or_404(acotar_a_tenant(FarmParcel.objects.all(), request), pk=pk)
+            form = acotar_formulario(FarmParcelsForm(request.POST, instance=farm_parcel), request)
         else:
             farm_parcel = None
-            form = FarmParcelsForm(request.POST)
+            form = acotar_formulario(FarmParcelsForm(request.POST), request)
 
         context = self.get_context_data(**kwargs)
         # Validate form and handle redirection or re-rendering with errors
         if form.is_valid():
-            form.save()
+            # PARCHE CNTA: lo que se crea desde la interfaz nace con dueno.
+            instancia = form.save(commit=False)
+            sellar_con_tenant(instancia, request)
+            instancia.save()
+            form.save_m2m()
             return redirect(self.success_url)
 
         context.update({
@@ -90,6 +100,6 @@ class FarmParcelView(LoginRequiredMixin, TemplateView):
     # Handle DELETE requests for deleting
     def delete(self, request, *args, **kwargs):
         pk = kwargs.get('pk')
-        farm_parcel = get_object_or_404(FarmParcel, pk=pk)
+        farm_parcel = get_object_or_404(acotar_a_tenant(FarmParcel.objects.all(), request), pk=pk)
         farm_parcel.delete()
         return redirect(self.success_url)

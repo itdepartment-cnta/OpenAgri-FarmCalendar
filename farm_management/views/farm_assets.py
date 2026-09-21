@@ -18,9 +18,18 @@ from farm_management.models import (
 from farm_management.constants import ERROR_PROCESSING
 from farm_management.forms import get_generic_farm_asset_form
 
+# PARCHE CNTA: la interfaz web no filtraba por empresa. Ver tenant_scope.
+from farm_calendar.utils.tenant_scope import (
+    TenantScopedFormMixin, TenantScopedWebViewMixin, acotar_a_tenant,
+    sellar_con_tenant,
+)
 
 
-class BaseFarmAssetListManagementView(LoginRequiredMixin, ListView, FormMixin):
+
+class BaseFarmAssetListManagementView(
+    TenantScopedWebViewMixin, TenantScopedFormMixin, LoginRequiredMixin,
+    ListView, FormMixin
+):
     model = FarmAsset
     template_name = "farm_management/farm_assets/farm_assets.html"
     context_object_name = 'objects'
@@ -75,7 +84,11 @@ class BaseFarmAssetListManagementView(LoginRequiredMixin, ListView, FormMixin):
         context = self.get_context_data()
         form = self.get_form()
         if form.is_valid():
-            form.save()
+            # PARCHE CNTA: lo que se crea desde la interfaz nace con dueno.
+            instancia = form.save(commit=False)
+            sellar_con_tenant(instancia, request)
+            instancia.save()
+            form.save_m2m()
 
             messages.success(request, f"{self.model.__name__} saved successfully.")
             return self.form_valid(form)
@@ -87,7 +100,9 @@ class BaseFarmAssetListManagementView(LoginRequiredMixin, ListView, FormMixin):
         return super().render_to_response(context, **response_kwargs)
 
 
-class BaseFarmAssetUpdateView(UpdateView):
+class BaseFarmAssetUpdateView(
+    TenantScopedWebViewMixin, TenantScopedFormMixin, UpdateView
+):
     model = None
     form_class = None
     # form_class = get_generic_farm_asset_form(FarmCrop)
@@ -169,7 +184,9 @@ class AgriculturalMachineListView(BaseFarmAssetListManagementView):
 class AnimalGroupAutocomplete(View):
     def get(self, request, *args, **kwargs):
         if 'term' in request.GET:
-            qs = FarmAnimal.objects.filter(animal_group__icontains=request.GET.get('term'))
+            qs = acotar_a_tenant(FarmAnimal.objects.all(), request).filter(
+                animal_group__icontains=request.GET.get('term')
+            )
             animal_groups = list(set(qs.values_list('animal_group', flat=True)))
             return JsonResponse(animal_groups, safe=False)
         return JsonResponse([], safe=False)

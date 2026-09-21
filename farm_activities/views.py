@@ -10,6 +10,11 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, UpdateView
 from django.views import View
 
+# PARCHE CNTA: la interfaz web no filtraba por empresa. Ver tenant_scope.
+from farm_calendar.utils.tenant_scope import (
+    acotar_a_tenant, acotar_formulario, sellar_con_tenant,
+)
+
 from .models import (
     FarmCalendarActivity,
     FarmCalendarActivityType,
@@ -97,11 +102,11 @@ class PreRegisterCalendarActivityView(LoginRequiredMixin, View):
 
     template_name = 'farm_activities/activities/pre_activity_form.html'
     def get(self, request):
-        form = FarmCalendarActivityTypeSelectionForm()
+        form = acotar_formulario(FarmCalendarActivityTypeSelectionForm(), request)
         return render(request, self.template_name, {'form': form})
 
     def post(self, request):
-        form = FarmCalendarActivityTypeSelectionForm(request.POST)
+        form = acotar_formulario(FarmCalendarActivityTypeSelectionForm(request.POST), request)
         if form.is_valid():
             cleaned_data = form.cleaned_data
             return redirect('create_calendar_activity', activity_type=cleaned_data['activity_type'].name)
@@ -116,14 +121,18 @@ class FarmCalendarActivityCreateByTypeView(LoginRequiredMixin, View):
         if GenericActivityForm is None:
             redirect('pre_register_calendar_activity')
         activity_type_instance = FarmCalendarActivityType.objects.get(name=activity_type)
-        form = GenericActivityForm(initial={'activity_type': activity_type_instance, 'title': activity_type_instance.name})
+        form = acotar_formulario(GenericActivityForm(initial={'activity_type': activity_type_instance, 'title': activity_type_instance.name}), request)
         return render(request, self.template_name, {'form': form})
 
     def post(self, request, activity_type):
         GenericActivityForm = get_generic_farm_calendar_activity_form(activity_type=activity_type)
-        form = GenericActivityForm(request.POST)
+        form = acotar_formulario(GenericActivityForm(request.POST), request)
         if form.is_valid():
-            form.save()
+            # PARCHE CNTA: lo que se crea desde la interfaz nace con dueno.
+            instancia = form.save(commit=False)
+            sellar_con_tenant(instancia, request)
+            instancia.save()
+            form.save_m2m()
             return redirect('calendar')
         return render(request, self.template_name, {'form': form})
 
@@ -131,7 +140,11 @@ class FarmCalendarActivityCreateByTypeView(LoginRequiredMixin, View):
 class FarmCalendarActivityListView(LoginRequiredMixin, View):
     def get(self, request):
         activities_json_data = []
-        for activity in FarmCalendarActivity.objects.select_related('activity_type').all():
+        # PARCHE CNTA: solo las actividades de la empresa de quien mira.
+        actividades = acotar_a_tenant(
+            FarmCalendarActivity.objects.select_related('activity_type').all(), request
+        )
+        for activity in actividades:
             end_time = activity.end_datetime.isoformat() if activity.end_datetime else None
             activities_json_data.append({
                 'title': activity.title,
@@ -150,9 +163,19 @@ class FarmCalendarActivityEdit(LoginRequiredMixin, View):
     template_name = 'farm_activities/activities/activity_form.html'
 
     def get_specific_activity_object_and_form(self, pk):
-        base_object = get_object_or_404(FarmCalendarActivity, pk=pk)
+        base_object = get_object_or_404(
+            acotar_a_tenant(FarmCalendarActivity.objects.all(), self.request), pk=pk
+        )
         GenericActivityForm = get_generic_farm_calendar_activity_form(activity_type=base_object.activity_type.name)
-        main_object = get_object_or_404(GenericActivityForm.Meta.model.objects.prefetch_related('activity_type', 'nested_activities'), pk=pk)
+        main_object = get_object_or_404(
+            acotar_a_tenant(
+                GenericActivityForm.Meta.model.objects.prefetch_related(
+                    'activity_type', 'nested_activities'
+                ),
+                self.request,
+            ),
+            pk=pk,
+        )
         return main_object, GenericActivityForm
 
     def get_asset_delete_api_url(self, model_name, pk):
@@ -164,7 +187,7 @@ class FarmCalendarActivityEdit(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         main_object, GenericActivityForm = self.get_specific_activity_object_and_form(pk)
-        form = GenericActivityForm(instance=main_object)
+        form = acotar_formulario(GenericActivityForm(instance=main_object), request)
         delete_url = self.get_asset_delete_api_url(main_object._meta.model_name, pk)
         context = {
             'form': form,
@@ -175,7 +198,7 @@ class FarmCalendarActivityEdit(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         main_object, GenericActivityForm = self.get_specific_activity_object_and_form(pk)
-        form = GenericActivityForm(request.POST, instance=main_object)
+        form = acotar_formulario(GenericActivityForm(request.POST, instance=main_object), request)
         if form.is_valid():
             form.save()
             return redirect('calendar')
@@ -197,7 +220,9 @@ class FarmCalendarActivityAutocomplete(View):
             search_parts = search_term.split()
 
             # Annotate by concatenating the title and start_datetime
-            annotated_qs = FarmCalendarActivity.objects.annotate(
+            annotated_qs = acotar_a_tenant(
+                FarmCalendarActivity.objects.all(), request
+            ).annotate(
                 activity_str=Concat('title', 'start_datetime', output_field=CharField())
             )
 

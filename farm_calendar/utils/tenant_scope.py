@@ -83,3 +83,90 @@ class TenantScopedModelViewSet:
             serializer.save(tenant=tenant)
         else:
             serializer.save()
+
+
+# ── Vistas web ───────────────────────────────────────────────────────
+#
+# El mixin de arriba solo cubre la API REST. La interfaz web de Farm Calendar
+# consultaba con `.all()` sin filtrar, así que un cliente veía los datos de
+# todos: listados completos y, conociendo un UUID, el detalle de un recurso
+# ajeno. Lo de aquí abajo cierra ese camino con las mismas tres reglas.
+
+
+def acotar_a_tenant(qs, request):
+    """Acota un queryset al tenant de la petición. Mismas reglas que el mixin.
+
+    Pensada para las vistas web, donde no hay DRF y cada vista arma su propio
+    queryset.
+    """
+    if not modelo_tiene_tenant(qs.model):
+        return qs
+
+    usuario = getattr(request, "user", None)
+    if usuario is not None and getattr(usuario, "is_superuser", False):
+        return qs
+
+    tenant = tenant_de_peticion(request)
+    if not tenant:
+        return qs.none()
+    return qs.filter(tenant=tenant)
+
+
+class TenantScopedWebViewMixin:
+    """Acota el queryset de una vista web (ListView, UpdateView, DetailView).
+
+    Al actuar sobre `get_queryset`, cubre a la vez el listado y la búsqueda
+    del objeto por pk: `get_object` de Django parte de ese mismo queryset, así
+    que un recurso de otra empresa deja de existir para la vista y devuelve
+    404 en vez de 200.
+    """
+
+    def get_queryset(self):
+        return acotar_a_tenant(super().get_queryset(), self.request)
+
+
+def sellar_con_tenant(instancia, request):
+    """Pone el tenant de la petición en un objeto antes de guardarlo.
+
+    El equivalente de `perform_create` para las vistas web. Sin esto, lo que
+    se crea desde la interfaz nace sin dueño y no lo ve nadie.
+    """
+    if not instancia.pk and hasattr(instancia, TENANT_CLAIM):
+        if not getattr(instancia, TENANT_CLAIM, None):
+            tenant = tenant_de_peticion(request)
+            if tenant:
+                setattr(instancia, TENANT_CLAIM, tenant)
+    return instancia
+
+
+def acotar_formulario(form, request):
+    """Acota los desplegables de un formulario al tenant de la petición.
+
+    Filtrar solo el listado no basta: los formularios de alta y edición traen
+    campos de elección —la parcela de un animal, por ejemplo— cuyo queryset
+    era el global. Los nombres de las granjas de otras empresas aparecían en
+    los `<option>`, y además se podía asignar un recurso propio a una parcela
+    ajena enviando su UUID.
+
+    Recorre los campos con queryset y acota los que apunten a un modelo con
+    `tenant`. Los demás los deja como están.
+    """
+    if form is None:
+        return form
+    for campo in getattr(form, "fields", {}).values():
+        qs = getattr(campo, "queryset", None)
+        if qs is None:
+            continue
+        try:
+            campo.queryset = acotar_a_tenant(qs, request)
+        except Exception:
+            # Un campo raro no debe tumbar el formulario entero.
+            continue
+    return form
+
+
+class TenantScopedFormMixin:
+    """Acota los desplegables del formulario de una vista basada en clase."""
+
+    def get_form(self, *args, **kwargs):
+        return acotar_formulario(super().get_form(*args, **kwargs), self.request)
