@@ -6,6 +6,8 @@ from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from django.contrib.auth.mixins import LoginRequiredMixin
 
+from farm_calendar.utils.tenant_scope import acotar_a_tenant
+
 from ..models.farm_parcels import Farm, FarmParcel
 
 
@@ -40,12 +42,22 @@ class AjaxHandlerView(LoginRequiredMixin, View):
         else:
             return JsonResponse({"error": "Invalid action"}, status=400)
 
+    @staticmethod
+    def _objeto_de_mi_empresa(request, model, pk):
+        """PARCHE CNTA: busca el objeto solo entre los de la empresa de la petición.
+
+        Con `get_object_or_404(model, pk=pk)` cualquier persona con sesión podía
+        desactivar o borrar una granja o parcela de otra empresa conociendo su
+        UUID. Un objeto ajeno responde 404, igual que uno que no existe.
+        """
+        return get_object_or_404(acotar_a_tenant(model._default_manager.all(), request), pk=pk)
+
     def toggle_status(self, request, model, pk):
         if not model or not pk:
             return JsonResponse({"error": "Missing subject or primary key for toggling status."}, status=400)
 
         # Get the object and toggle its status
-        obj = get_object_or_404(model, pk=pk)
+        obj = self._objeto_de_mi_empresa(request, model, pk)
         if obj.status == obj.BaseModelStatus.ACTIVE:
             obj.status = obj.BaseModelStatus.INACTIVE
             message = f"{model._meta.verbose_name} has been deactivated."
@@ -64,7 +76,7 @@ class AjaxHandlerView(LoginRequiredMixin, View):
             return JsonResponse({"error": "Missing subject or primary key for deletion."}, status=400)
 
         # Get the object and perform a soft delete
-        obj = get_object_or_404(model, pk=pk)
+        obj = self._objeto_de_mi_empresa(request, model, pk)
 
         try:
             # Only call soft_delete on the main object
