@@ -7,6 +7,8 @@ claim en el JWT y estas utilidades lo aplican al queryset de cada viewset.
 El valor canónico es el UUID del `Tenant` de GateKeeper, que es quien posee el
 concepto de empresa en todo el sistema.
 """
+from django.conf import settings
+from django.core.exceptions import FieldDoesNotExist
 from django.urls import set_script_prefix  # noqa: F401  (evita import vacío)
 
 from farm_calendar.utils.jwt_utils import decode_jwt, get_token_from_jwt_request
@@ -37,6 +39,87 @@ def tenant_de_peticion(request):
 
 def modelo_tiene_tenant(modelo):
     return any(f.name == TENANT_CLAIM for f in modelo._meta.get_fields())
+
+
+# ── Filtro por granja ────────────────────────────────────────────────
+#
+# Encima del filtro por empresa. Con FARM_ACCESS_FILTER_ENABLED apagado no hace
+# nada. Encendido, una persona normal solo ve lo que cuelga de las granjas de
+# sus filas en acceso_usuario_granja. Ver DISENO_ROLES_Y_GRANJAS_COMPARTIDAS.md §6.
+
+
+def granjas_permitidas(request, tenant):
+    """Granjas que la persona de la petición puede ver dentro de su empresa.
+
+    None significa TODAS las de la empresa; un conjunto, solo esas (vacío = ninguna,
+    falla cerrado). Ven toda la empresa:
+
+    - la cuenta de servicio de SheepCare (FARM_ACCESS_SERVICE_USERS): busca y crea
+      granjas y parcelas por nombre para cualquier persona de la empresa, y sin
+      verlas todas duplicaría o fallaría;
+    - quien tenga una fila de administrador.
+
+    Los superusuarios se tratan antes, en quien llama.
+    """
+    cacheado = getattr(request, "_cnta_granjas", "sin_calcular")
+    if cacheado != "sin_calcular":
+        return cacheado
+
+    # Import tardio: el modelo no existe aun cuando se carga este modulo.
+    from farm_management.models import UserFarmAccess
+
+    usuario = getattr(request, "user", None)
+    nombre = ""
+    if usuario is not None and getattr(usuario, "is_authenticated", False):
+        nombre = (usuario.get_username() or "").strip().lower()
+
+    if nombre in settings.FARM_ACCESS_SERVICE_USERS:
+        resultado = None
+    else:
+        filas = list(
+            UserFarmAccess.objects.filter(tenant=tenant, user=nombre).values_list("is_admin", "farm_id")
+        )
+        resultado = None if any(es_admin for es_admin, _ in filas) else {f for _, f in filas}
+
+    request._cnta_granjas = resultado
+    return resultado
+
+
+def ruta_a_granja(modelo):
+    """Camino ORM desde el modelo hasta el id de su granja, o None si no lo hay.
+
+    Farm: su propio id. FarmParcel: `farm_id`. Activos (cultivos, animales, maquinas,
+    sensores) y actividades: por su parcela, `parcel__farm_id`. Lo demas (materiales,
+    catalogos con tenant) no se puede atribuir a una granja.
+    """
+    from farm_management.models import Farm, FarmParcel
+
+    if issubclass(modelo, Farm):
+        return "id"
+    if issubclass(modelo, FarmParcel):
+        return "farm_id"
+    try:
+        campo = modelo._meta.get_field("parcel")
+    except FieldDoesNotExist:
+        return None
+    if campo.is_relation and campo.related_model is FarmParcel:
+        return "parcel__farm_id"
+    return None
+
+
+def _acotar_por_granja(qs, request, tenant):
+    if not getattr(settings, "FARM_ACCESS_FILTER_ENABLED", False):
+        return qs
+    permitidas = granjas_permitidas(request, tenant)
+    if permitidas is None:
+        return qs
+    ruta = ruta_a_granja(qs.model)
+    if ruta is None:
+        # Sin camino a una granja solo lo ve quien ve toda la empresa.
+        return qs.none()
+    # Una parcela nula (activo o actividad sin parcela) tampoco entra: no se
+    # puede atribuir.
+    return qs.filter(**{f"{ruta}__in": permitidas})
 
 
 class TenantScopedModelViewSet:
@@ -70,7 +153,7 @@ class TenantScopedModelViewSet:
         tenant = tenant_de_peticion(self.request)
         if not tenant:
             return qs.none()
-        return qs.filter(tenant=tenant)
+        return _acotar_por_granja(qs.filter(tenant=tenant), self.request, tenant)
 
     def perform_create(self, serializer):
         """El tenant lo pone el token, no el cuerpo de la petición.
@@ -109,7 +192,7 @@ def acotar_a_tenant(qs, request):
     tenant = tenant_de_peticion(request)
     if not tenant:
         return qs.none()
-    return qs.filter(tenant=tenant)
+    return _acotar_por_granja(qs.filter(tenant=tenant), request, tenant)
 
 
 class TenantScopedWebViewMixin:

@@ -167,6 +167,13 @@ FARM_ACCESS_SERVICE_USERS = [
     for u in config('FARM_ACCESS_SERVICE_USERS', default='sheepcare-service').split(',')
     if u.strip()
 ]
+
+# PARCHE CNTA: interruptor del filtro por granja. Apagado, Farm Calendar filtra
+# solo por empresa, como antes. Encendido, una persona normal ve solo las granjas
+# de sus filas de acceso_usuario_granja. Las cuentas de FARM_ACCESS_SERVICE_USERS
+# y los administradores de la tabla ven toda su empresa. Se enciende solo cuando
+# la tabla esta al dia (docs/SINCRONIZAR_ACCESOS_FARMCALENDAR.md).
+FARM_ACCESS_FILTER_ENABLED = config('FARM_ACCESS_FILTER_ENABLED', default=False, cast=bool)
 POST_AUTH_TOKEN_ATTRIBUTE = config('POST_AUTH_TOKEN_ATTRIBUTE', default='access_token')
 
 #lets igore RSA-based signing for now...
