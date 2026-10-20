@@ -217,7 +217,8 @@
                     const newStatus = !isActive;
 
                     $.ajax({
-                        url: `/farm-parcel/ajax/toggle-status/${pk}/`,
+                        {# PARCHE CNTA: la ruta fija ignoraba el prefijo /farmcalendar del despliegue #}
+                        url: '{% url 'action' prefix='farm-parcel' action='toggle-status' pk='00000000-0000-0000-0000-000000000000' %}'.replace('00000000-0000-0000-0000-000000000000', pk),
                         method: 'POST',
                         data: {'status': newStatus},
                         success: function(response) {
@@ -242,7 +243,8 @@
                     // Confirmation dialog
                     if (confirm('Are you sure you want to delete this farm? This will remove all related records.')) {
                         $.ajax({
-                            url: `/farm-parcel/ajax/delete/${pk}/`,
+                            {# PARCHE CNTA: la ruta fija ignoraba el prefijo /farmcalendar del despliegue #}
+                            url: '{% url 'action' prefix='farm-parcel' action='delete' pk='00000000-0000-0000-0000-000000000000' %}'.replace('00000000-0000-0000-0000-000000000000', pk),
                             method: 'POST',
                             success: function(response) {
                                 alertify.success(response.message);
