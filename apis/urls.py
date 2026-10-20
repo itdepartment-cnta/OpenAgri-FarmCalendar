@@ -33,6 +33,7 @@ from .views import (
     CompostTurningOperationViewSet,
     AnimalActivityViewSet,
     AnimalLactatingActivityViewSet,
+    FarmAccessView,
 )
 
 router = routers.DefaultRouter()
@@ -78,6 +79,7 @@ compost_operations_router.register(r'CompostTurningOperations', CompostTurningOp
 urlpatterns = [
     path('api/', lambda request: redirect('api-root', settings.SHORT_API_VERSION)),
     path('api/<str:version>/', include([
+        path('farm-access/', FarmAccessView.as_view(), name='farm-access'),  # PARCHE CNTA
         path('', include(router.urls)),  # Register versioned API routes
         path('', include(compost_operations_router.urls)),  # Register versioned API routes
         path('schema/', SpectacularAPIView.as_view(), name='schema'),  # Schema generation

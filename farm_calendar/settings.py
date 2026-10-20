@@ -157,6 +157,16 @@ JWT_SIGNING_KEY = config('JWT_SIGNING_KEY')
 JWT_COOKIE_NAME = config('JWT_COOKIE_NAME')
 JWT_LOCAL_USER_ID_FIELD = config('JWT_LOCAL_USER_ID_FIELD', default='username')
 AUTO_CREATE_AUTH_USER = config('AUTO_CREATE_AUTH_USER', default=True, cast=bool)
+
+# PARCHE CNTA: cuentas (user_id del token) que pueden leer y escribir
+# acceso_usuario_granja. Es la cuenta de servicio de SheepCare, la misma de
+# FARMCALENDAR_SERVICE_USER en el backend público. Lista separada por comas;
+# vacía, nadie puede.
+FARM_ACCESS_SERVICE_USERS = [
+    u.strip().lower()
+    for u in config('FARM_ACCESS_SERVICE_USERS', default='sheepcare-service').split(',')
+    if u.strip()
+]
 POST_AUTH_TOKEN_ATTRIBUTE = config('POST_AUTH_TOKEN_ATTRIBUTE', default='access_token')
 
 #lets igore RSA-based signing for now...
